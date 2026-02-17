@@ -1,10 +1,12 @@
 import { Module } from '@nestjs/common';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
+import { AuthController } from './controller/auth.controller';
+import { LogoutGuard } from './services/logout.guard';
+import { SamlLoginGuard } from './services/saml-login.guard';
+import { SamlStrategy } from './strategies/saml.strategy';
 
 @Module({
   imports: [],
-  controllers: [AppController],
-  providers: [AppService],
+  controllers: [AuthController],
+  providers: [LogoutGuard, SamlLoginGuard, SamlStrategy],
 })
 export class AppModule {}
