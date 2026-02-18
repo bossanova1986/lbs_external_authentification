@@ -9,4 +9,4 @@ cd /usr/src/app/
 
 su -s /bin/sh -c "node /usr/src/app/dist/main.js" nodeuser 
 
-exit 1
+exit 0
