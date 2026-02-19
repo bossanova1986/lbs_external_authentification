@@ -2,14 +2,14 @@ import { PassportStrategy } from '@nestjs/passport';
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { readFileSync } from 'fs';
-import { Profile, Strategy, VerifyWithoutRequest } from '@node-saml/passport-saml/lib';
+import { Profile, Strategy, VerifyWithoutRequest, VerifyWithRequest } from '@node-saml/passport-saml/lib';
 import { Request } from 'express';
 
 @Injectable()
 export class SamlStrategy extends PassportStrategy(Strategy) {
     
     constructor(private configService: ConfigService) {
-        const signonVerify:VerifyWithoutRequest = (profile: Profile, done: (err: any, user?: any) => void) => {
+        const signonVerify:VerifyWithRequest = (_req, profile: Profile, done: (err: any, user?: any) => void) => {
             console.log("done");
             return done(null, profile);
         };
