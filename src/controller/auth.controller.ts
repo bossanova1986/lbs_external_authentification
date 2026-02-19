@@ -1,4 +1,4 @@
-import { Controller, Get, MethodNotAllowedException, Next, Post, Query, Req, Res, UnauthorizedException, UseGuards } from "@nestjs/common";
+import { Controller, Get, HttpCode, MethodNotAllowedException, Next, Post, Query, Req, Res, UnauthorizedException, UseGuards } from "@nestjs/common";
 import { NextFunction, Request } from 'express';
 import { readFileSync } from 'fs'
 import { ConfigService } from "@nestjs/config";
@@ -32,13 +32,14 @@ export class AuthController {
   }
 
   @UseGuards(AuthGuard('saml'))
+  @HttpCode(200)
   @Post("signonCallback")
-  async signonCallback(@Req() req: Request, @Res() res:Response) {
+  async signonCallback(@Req() req: Request, @Res({ passthrough: true }) res:Response) {
     if (!req.user || !req.user['barcode']) throw new UnauthorizedException({
       code: 'not_found',
       error: "User does not exist"
     });
-    res.set(200).json({
+    res.json({
       patron: req.user['barcode']
     });
   }
