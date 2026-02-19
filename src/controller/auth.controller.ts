@@ -33,8 +33,13 @@ export class AuthController {
   @UseGuards(AuthGuard('saml'))
   @Post("signonCallback")
   async signonCallback(@Req() req: Request, @Res() res) {
-    if (!req.user) throw new UnauthorizedException();
-    console.log('LBS Login successfull')
+    if (!req.user || !req.user['barcode']) throw new UnauthorizedException({
+      code: 'not_found',
+      error: "User does not exist"
+    });
+    return {
+      patron: req.user['barcode']
+    }
   }
 
   @UseGuards(AuthGuard('saml'))

@@ -10,9 +10,7 @@ export class SamlStrategy extends PassportStrategy(Strategy) {
     
     constructor(private configService: ConfigService) {
         const signonVerify:VerifyWithRequest = (_req, profile: Profile, done: (err: any, user?: any) => void) => {
-            console.log("done");
             const user = this.validate(_req, profile)
-            console.log(user)
             return done(null, user);
         };
         super({
@@ -34,9 +32,7 @@ export class SamlStrategy extends PassportStrategy(Strategy) {
     }
 
     async validate(req: any, profile: Profile): Promise<any> {
-        console.log("validate")
         let name = profile['urn:oid:0.9.2342.19200300.100.1.1'] as string;
-        console.log(name)
         return {
             name,
             barcode: '31001048660'
