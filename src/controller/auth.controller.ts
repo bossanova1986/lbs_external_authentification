@@ -7,6 +7,7 @@ import * as passport from 'passport';
 import { SamlLoginGuard } from "src/services/saml-login.guard";
 import { SamlStrategy } from "src/strategies/saml.strategy";
 import { AuthGuard } from "@nestjs/passport";
+import { Response } from 'express';
 
 @Controller("auth")
 export class AuthController {
@@ -32,14 +33,14 @@ export class AuthController {
 
   @UseGuards(AuthGuard('saml'))
   @Post("signonCallback")
-  async signonCallback(@Req() req: Request, @Res() res) {
+  async signonCallback(@Req() req: Request, @Res() res:Response) {
     if (!req.user || !req.user['barcode']) throw new UnauthorizedException({
       code: 'not_found',
       error: "User does not exist"
     });
-    return {
+    res.set(200).json({
       patron: req.user['barcode']
-    }
+    });
   }
 
   @UseGuards(AuthGuard('saml'))
