@@ -11,7 +11,7 @@ export class SamlStrategy extends PassportStrategy(Strategy) {
     constructor(private configService: ConfigService) {
         const signonVerify:VerifyWithoutRequest = (profile: Profile, done: (err: any, user?: any) => void) => {
             console.log("done");
-            done(null, profile);
+            return done(null, profile);
         };
         super({
             issuer: configService.get('SSO_SP_DESCRIPTION'), // issuer string to supply to identity provider
