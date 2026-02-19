@@ -11,7 +11,9 @@ export class SamlStrategy extends PassportStrategy(Strategy) {
     constructor(private configService: ConfigService) {
         const signonVerify:VerifyWithRequest = (_req, profile: Profile, done: (err: any, user?: any) => void) => {
             console.log("done");
-            return done(null, profile);
+            const user = this.validate(_req, profile)
+            console.log(user)
+            return done(null, user);
         };
         super({
             issuer: configService.get('SSO_SP_DESCRIPTION'), // issuer string to supply to identity provider
@@ -31,7 +33,7 @@ export class SamlStrategy extends PassportStrategy(Strategy) {
         }, signonVerify );
     }
 
-    async validate(req: Request, profile: Profile): Promise<any> {
+    async validate(req: any, profile: Profile): Promise<any> {
         console.log("validate")
         let name = profile['urn:oid:0.9.2342.19200300.100.1.1'] as string;
         console.log(name)
