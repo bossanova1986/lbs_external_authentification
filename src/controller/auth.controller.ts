@@ -26,6 +26,9 @@ export class AuthController {
   signon(@Req() req: Request) {
     console.log(req.headers)
     console.log(req)
+    return {
+      patron: "31001048660"
+    }
   }
 
   @UseGuards(LogoutGuard)
