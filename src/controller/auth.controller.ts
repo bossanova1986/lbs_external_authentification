@@ -21,9 +21,11 @@ export class AuthController {
     res.send(a);
   }
 
-  @UseGuards(SamlLoginGuard)
+  //@UseGuards(SamlLoginGuard)
   @Get("signon")
-  signon() {
+  signon(@Req() req: Request) {
+    console.log(req.headers)
+    console.log(req)
   }
 
   @UseGuards(LogoutGuard)
