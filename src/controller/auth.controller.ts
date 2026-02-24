@@ -21,14 +21,11 @@ export class AuthController {
     res.send(a);
   }
 
-  //@UseGuards(SamlLoginGuard)
+  @UseGuards(SamlLoginGuard)
   @Get("signon")
   signon(@Req() req: Request) {
     console.log(req.headers)
-    console.log(req)
-    return {
-      patron: "31001048660"
-    }
+    console.log(req.headers['client-authorization'])
   }
 
   @UseGuards(LogoutGuard)
