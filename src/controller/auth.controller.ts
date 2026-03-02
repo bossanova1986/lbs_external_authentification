@@ -8,6 +8,7 @@ import { SamlLoginGuard } from "src/services/saml-login.guard";
 import { SamlStrategy } from "src/strategies/saml.strategy";
 import { AuthGuard } from "@nestjs/passport";
 import { Response } from 'express';
+import * as sanitizeHtml from 'sanitize-html';
 
 @Controller("auth")
 export class AuthController {
@@ -23,9 +24,12 @@ export class AuthController {
 
   @UseGuards(SamlLoginGuard)
   @Get("signon")
-  signon(@Req() req: Request) {
-    console.log(req.headers)
-    console.log(req.headers['client-authorization'])
+  signon() {
+  }
+
+  @Get("lbs_login")
+  lbs_login(@Req() req: Request) {
+    console.log(req)
   }
 
   @UseGuards(LogoutGuard)
@@ -34,16 +38,27 @@ export class AuthController {
   }
 
   @UseGuards(AuthGuard('saml'))
-  @HttpCode(200)
   @Post("signonCallback")
-  async signonCallback(@Req() req: Request, @Res({ passthrough: true }) res:Response) {
-    if (!req.user || !req.user['barcode']) throw new UnauthorizedException({
-      code: 'not_found',
-      error: "User does not exist"
-    });
-    res.json({
-      patron: req.user['barcode']
-    });
+  async signonCallback(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
+    //user object of request is enriched with token via saml auth guard
+    //send a POST request to LBS server with token as form data
+    const lbsLoginUrl = process.env.LBS_LOGIN_URL!; // z.B. https://lbs.example.de/LBS_WEB/login
+
+    res
+      .status(200)
+      .setHeader('Cache-Control', 'no-store')
+      .type('text/html; charset=utf-8')
+      .send(`<!doctype html>
+<html>
+  <head><meta charset="utf-8"></head>
+  <body>
+    <form id="lbs" action="${sanitizeHtml(lbsLoginUrl)}" method="post">
+      <input type="hidden" name="username" value="${sanitizeHtml(String(req.user['barcode']))}">
+      <input type="hidden" name="password" value="${sanitizeHtml(String('The Token'))}">
+    </form>
+    <script>document.getElementById('lbs').submit();</script>
+  </body>
+</html>`);
   }
 
   @UseGuards(AuthGuard('saml'))
