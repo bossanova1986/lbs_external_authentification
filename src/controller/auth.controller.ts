@@ -32,11 +32,13 @@ export class AuthController {
     //LBS sends request with Basic auth and Base64 encoded username:password in Authorization header, e.g. "Authorization: Basic dGVzdC11c2VyOnRlc3QtcGFzcw=="
     //as well as client secret, e.g. 'client-authorization': '9x831i0as9ghy1'
     if (!req.headers.authorization || !req.headers['client-authorization'] || req.headers['client-authorization'] !== this.configService.get<string>('LBS_CLIENT_SECRET')) {
+      console.log('Invalid client secret or missing authorization header');
       throw new UnauthorizedException({
         code: "invalid_client",
         error: "Client secret is not correct."
       });
     } else {
+      console.log('LBS login successful');
       return {
         'patronID' : '31001048660',
       }
