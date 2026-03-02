@@ -28,6 +28,7 @@ export class AuthController {
   }
 
   @Get("lbs_login")
+  @HttpCode(200)
   lbs_login(@Req() req: Request) {
     //LBS sends request with Basic auth and Base64 encoded username:password in Authorization header, e.g. "Authorization: Basic dGVzdC11c2VyOnRlc3QtcGFzcw=="
     //as well as client secret, e.g. 'client-authorization': '9x831i0as9ghy1'
@@ -40,7 +41,7 @@ export class AuthController {
     } else {
       console.log('LBS login successful');
       return {
-        'patronID' : '31001048660',
+        'patron' : '31001048660',
       }
     }
   }
