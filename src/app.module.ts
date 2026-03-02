@@ -3,14 +3,26 @@ import { AuthController } from './controller/auth.controller';
 import { LogoutGuard } from './services/logout.guard';
 import { SamlLoginGuard } from './services/saml-login.guard';
 import { SamlStrategy } from './strategies/saml.strategy';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { JwtModule } from '@nestjs/jwt';
+import { readFileSync } from 'node:fs';
+import { Algorithm } from 'jsonwebtoken';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: [(process.env.NODE_ENV) ? `env.${process.env.NODE_ENV}` : 'env.template'],
-    })
+    }),
+    JwtModule.registerAsync({
+      imports: [ConfigModule],
+      useFactory: async (configService: ConfigService) => ({
+        publicKey: readFileSync(configService.get<string>('JWT_TOKEN_PUBLICKEY')),
+        privateKey: readFileSync(configService.get<string>('JWT_TOKEN_PRIVATEKEY')),
+        signOptions: { expiresIn: configService.get<any>('JWT_TOKEN_EXPIRATION'), algorithm: configService.get<Algorithm>('JWT_TOKEN_ALGORITHM') },
+      }),
+      inject: [ConfigService],
+    }),
   ],
   controllers: [AuthController],
   providers: [LogoutGuard, SamlLoginGuard, SamlStrategy],

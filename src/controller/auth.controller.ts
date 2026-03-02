@@ -1,19 +1,18 @@
-import { Controller, Get, HttpCode, MethodNotAllowedException, Next, Post, Query, Req, Res, UnauthorizedException, UseGuards } from "@nestjs/common";
-import { NextFunction, Request } from 'express';
-import { readFileSync } from 'fs'
+import { Controller, Get, HttpCode, Post, Req, Res, UnauthorizedException, UseGuards } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
-import { LogoutGuard } from "../services/logout.guard";
-import * as passport from 'passport';
+import { JwtService } from "@nestjs/jwt";
+import { AuthGuard } from "@nestjs/passport";
+import { Request, Response } from 'express';
+import { readFileSync } from 'fs';
+import * as sanitizeHtml from 'sanitize-html';
 import { SamlLoginGuard } from "src/services/saml-login.guard";
 import { SamlStrategy } from "src/strategies/saml.strategy";
-import { AuthGuard } from "@nestjs/passport";
-import { Response } from 'express';
-import * as sanitizeHtml from 'sanitize-html';
+import { LogoutGuard } from "../services/logout.guard";
 
 @Controller("auth")
 export class AuthController {
 
-  constructor(private configService: ConfigService, private ssoStrategy: SamlStrategy) { }
+  constructor(private configService: ConfigService, private ssoStrategy: SamlStrategy, private jwtService: JwtService) { }
 
   @Get("saml")
   saml(@Res() res) {
@@ -38,19 +37,34 @@ export class AuthController {
         code: "invalid_client",
         error: "Client secret is not correct."
       });
-    } 
+    }
+    //if the request is from LBS, username and token are extracted from the authorization header and base64 decoded
+    try {
+      const authHeader = req.headers.authorization;
+      const base64Credentials = authHeader.split(' ')[1];
+      const credentials = Buffer.from(base64Credentials, 'base64').toString('ascii');
+      const [username, token] = credentials.split(':');
+      console.log('Token: '+token)
+      const payload = this.jwtService.verify(token);
+      if (payload.barcode === username) {
+        console.log('LBS login successful');
+        return {
+          'patron': payload.barcode,
+        }
+      } else console.log(payload)
+
+    } catch (error) {
+      console.log(error)
+      throw new UnauthorizedException({
+        code: "invalid_credentials",
+        error: "Password incorrect"
+      })
+    }
+
     throw new UnauthorizedException({
-        code: "not_found",
-        error: "User does not exist"
+      code: "not_found",
+      error: "User does not exist"
     })
-
-
-
-     /* console.log('LBS login successful');
-      return {
-        'patron' : '31001048660',
-      }*/
-    
   }
 
   @UseGuards(LogoutGuard)
@@ -65,6 +79,13 @@ export class AuthController {
     //send a POST request to LBS server with token as form data
     const lbsLoginUrl = process.env.LBS_LOGIN_URL!; // z.B. https://lbs.example.de/LBS_WEB/login
 
+    const payload = {
+      id: req.user['name'],
+      barcode: req.user['barcode']
+    }
+
+    const token = this.jwtService.sign(payload);
+
     res
       .status(200)
       .setHeader('Cache-Control', 'no-store')
@@ -75,7 +96,7 @@ export class AuthController {
   <body>
     <form id="lbs" action="${sanitizeHtml(lbsLoginUrl)}" method="post">
       <input type="hidden" name="username" value="${sanitizeHtml(String(req.user['barcode']))}">
-      <input type="hidden" name="password" value="${sanitizeHtml(String('The Token'))}">
+      <input type="hidden" name="password" value="${sanitizeHtml(String(token))}">
     </form>
     <script>document.getElementById('lbs').submit();</script>
   </body>
