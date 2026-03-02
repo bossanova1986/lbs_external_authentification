@@ -38,12 +38,19 @@ export class AuthController {
         code: "invalid_client",
         error: "Client secret is not correct."
       });
-    } else {
-      console.log('LBS login successful');
+    } 
+    throw new UnauthorizedException({
+        code: "not_found",
+        error: "User does not exist"
+    })
+
+
+
+     /* console.log('LBS login successful');
       return {
         'patron' : '31001048660',
-      }
-    }
+      }*/
+    
   }
 
   @UseGuards(LogoutGuard)
