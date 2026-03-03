@@ -84,7 +84,7 @@ export class AuthController {
   async signonCallback(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
     //user object of request is enriched with token via saml auth guard
     //send a POST request to LBS server with token as form data
-    const lbsLoginUrl = process.env.LBS_LOGIN_URL!; // z.B. https://lbs.example.de/LBS_WEB/login
+    const lbsLoginUrl = process.env.LBS_LOGIN_URL!; 
 
     const payload = {
       id: req.user['name'],
