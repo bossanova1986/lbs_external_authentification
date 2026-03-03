@@ -43,10 +43,10 @@ export class AuthController {
     const credentials = Buffer.from(base64Credentials, 'base64').toString('ascii');
     const [username, token] = credentials.split(':');
 
-    if (username.startsWith('saml_')) {
+    if (username.startsWith(this.configService.get<string>('SSO_PREFIX'))) {
       try {
         const payload = this.jwtService.verify(token);
-        if (payload.barcode === username.replace('saml_', '')) {
+        if (payload.barcode === username.replace(this.configService.get<string>('SSO_PREFIX'), '')) {
           console.log('SAML login successful for patron with barcode: ' + payload.barcode);
           return {
             'patron': payload.barcode,
@@ -66,7 +66,7 @@ export class AuthController {
         })
       }
     } else {
-      console.log('Username does not start with "saml_": ' + username);
+      console.log('Username does not start with SSO prefix: ' + username);
       throw new UnauthorizedException({
         code: "not_found",
         error: "User does not exist"
@@ -102,7 +102,7 @@ export class AuthController {
   <head><meta charset="utf-8"></head>
   <body>
     <form id="lbs" action="${sanitizeHtml(lbsLoginUrl)}" method="post">
-      <input type="hidden" name="username" value="${sanitizeHtml('saml_' + String(req.user['barcode']))}">
+      <input type="hidden" name="username" value="${sanitizeHtml(this.configService.get<string>('SSO_PREFIX') + String(req.user['barcode']))}">
       <input type="hidden" name="password" value="${sanitizeHtml(String(token))}">
     </form>
     <script>document.getElementById('lbs').submit();</script>

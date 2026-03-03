@@ -23,19 +23,20 @@ export class SamlStrategy extends PassportStrategy(Strategy) {
             decryptionPvk: readFileSync(configService.get('SSO_SP_PRIVATEKEY'), "utf-8"), // private key that will be used to attempt to decrypt any encrypted assertions that are received
             signatureAlgorithm: configService.get('SSO_SP_ALGORITHM'),
             digestAlgorithm: configService.get('SSO_SP_ALGORITHM'),
-            identifierFormat: 'urn:oasis:names:tc:SAML:2.0:nameid-format:persistent',
-            authnContext: ["urn:oasis:names:tc:SAML:2.0:ac:classes:PasswordProtectedTransport"],
-            wantAssertionsSigned: true,
+            identifierFormat: configService.get('SSO_IDP_ID_FORMAT'), // the format of the NameID that the IdP will include in the SAML Response. This is used by the IdP to determine which attribute to use as NameID in the SAML Response. The default is "urn:oasis:names:tc:SAML:1.1:nameid-format:unspecified", which means that the IdP can choose any attribute to use as NameID.
+            authnContext: [configService.get('SSO_IDP_AUTHN_CONTEXT')],
+            wantAssertionsSigned: ['true', '1', 'yes'].includes(configService.get<string>('SSO_IDP_WANT_ASSERTIONS_SIGNED')?.toLowerCase()), // whether the IdP will sign the SAML Response. This is used by the IdP to determine whether to sign the SAML Response. The default is false.
             passReqToCallback: true,
             idpCert: readFileSync(configService.get('SSO_IDP_PUBLICKEY'), "utf-8"), // the IDP's public signing certificate used to validate the signatures of the incoming SAML Responses,
         }, signonVerify );
     }
 
     async validate(req: any, profile: Profile): Promise<any> {
-        let name = profile['urn:oid:0.9.2342.19200300.100.1.1'] as string;
+        let name = profile[this.configService.get<string>('SSO_IDP_UID_FIELD')] as string;
+        let barcode = profile[this.configService.get<string>('SSO_IDP_BARCODE_FIELD')] as string;
         return {
             name,
-            barcode: '31001048660'
+            barcode
         }
     }
 }
