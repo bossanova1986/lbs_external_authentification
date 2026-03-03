@@ -49,28 +49,33 @@ export class AuthController {
 
       const payload = this.jwtService.verify(token);
       if (payload.barcode === username) {
-        console.log('LBS login successful');
+        console.log('LBS login successful for patron with barcode: ' + payload.barcode);
         return {
           'patron': payload.barcode,
         }
       } else throw new UnauthorizedException({
-        code: "invalid_credentials",
-        error: "Password incorrect"
+        code: "not_found",
+        error: "User does not exist"
+        //code: "invalid_credentials",
+        //error: "Password incorrect"
       })
 
     } catch (error) {
       console.log(error)
       const decodedPayload = this.jwtService.decode(token); //tries to decode without verifying signature if the given password is a jwt token (for fallback option in LBS)
       if (!decodedPayload) {
+        console.log('password is not a valid jwt token');
         throw new UnauthorizedException({
           code: "not_found",
           error: "User does not exist"
         })
       }
-
+      console.log('password is valid jwt token but not signed with correct secret');
       throw new UnauthorizedException({
-        code: "invalid_credentials",
-        error: "Password incorrect"
+          code: "not_found",
+          error: "User does not exist"
+        //code: "invalid_credentials",
+        //error: "Password incorrect"
       })
     }
   }
