@@ -38,44 +38,38 @@ export class AuthController {
         error: "Client secret is not correct."
       });
     }
-    //if the request is from LBS, username and token are extracted from the authorization header and base64 decoded
-    let token = '';
-    try {
-      const authHeader = req.headers.authorization;
-      const base64Credentials = authHeader.split(' ')[1];
-      const credentials = Buffer.from(base64Credentials, 'base64').toString('ascii');
-      const [username, decodedToken] = credentials.split(':');
-      token = decodedToken;
+    const authHeader = req.headers.authorization;
+    const base64Credentials = authHeader.split(' ')[1];
+    const credentials = Buffer.from(base64Credentials, 'base64').toString('ascii');
+    const [username, token] = credentials.split(':');
 
-      const payload = this.jwtService.verify(token);
-      if (payload.barcode === username) {
-        console.log('LBS login successful for patron with barcode: ' + payload.barcode);
-        return {
-          'patron': payload.barcode,
-        }
-      } else throw new UnauthorizedException({
-        code: "not_found",
-        error: "User does not exist"
-        //code: "invalid_credentials",
-        //error: "Password incorrect"
-      })
-
-    } catch (error) {
-      console.log(error)
-      const decodedPayload = this.jwtService.decode(token); //tries to decode without verifying signature if the given password is a jwt token (for fallback option in LBS)
-      if (!decodedPayload) {
-        console.log('password is not a valid jwt token');
-        throw new UnauthorizedException({
-          code: "not_found",
-          error: "User does not exist"
+    if (username.startsWith('saml_')) {
+      try {
+        const payload = this.jwtService.verify(token);
+        if (payload.barcode === username.replace('saml_', '')) {
+          console.log('SAML login successful for patron with barcode: ' + payload.barcode);
+          return {
+            'patron': payload.barcode,
+          }
+        } else {
+          console.log('Token is valid but barcode does not match username for user ' + username);
+          throw new UnauthorizedException({
+          code: "invalid_credentials",
+          error: "Password incorrect"
         })
       }
-      console.log('password is valid jwt token but not signed with correct secret');
+      } catch (error) {
+        console.log('password is not a valid JWT for user ' + username);
+        throw new UnauthorizedException({
+          code: "invalid_credentials",
+          error: "Password incorrect"
+        })
+      }
+    } else {
+      console.log('Username does not start with "saml_": ' + username);
       throw new UnauthorizedException({
-          code: "not_found",
-          error: "User does not exist"
-        //code: "invalid_credentials",
-        //error: "Password incorrect"
+        code: "not_found",
+        error: "User does not exist"
       })
     }
   }
@@ -108,7 +102,7 @@ export class AuthController {
   <head><meta charset="utf-8"></head>
   <body>
     <form id="lbs" action="${sanitizeHtml(lbsLoginUrl)}" method="post">
-      <input type="hidden" name="username" value="${sanitizeHtml(String(req.user['barcode']))}">
+      <input type="hidden" name="username" value="${sanitizeHtml('saml_' + String(req.user['barcode']))}">
       <input type="hidden" name="password" value="${sanitizeHtml(String(token))}">
     </form>
     <script>document.getElementById('lbs').submit();</script>
