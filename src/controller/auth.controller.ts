@@ -1,4 +1,4 @@
-import { Controller, Get, HttpCode, Post, Req, Res, UnauthorizedException, UseGuards } from "@nestjs/common";
+import { Controller, Get, HttpCode, InternalServerErrorException, Post, Req, Res, UnauthorizedException, UseGuards } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { JwtService } from "@nestjs/jwt";
 import { AuthGuard } from "@nestjs/passport";
@@ -12,7 +12,10 @@ import { LogoutGuard } from "../services/logout.guard";
 @Controller("auth")
 export class AuthController {
 
-  constructor(private configService: ConfigService, private ssoStrategy: SamlStrategy, private jwtService: JwtService) { }
+  regex: RegExp;
+  constructor(private configService: ConfigService, private ssoStrategy: SamlStrategy, private jwtService: JwtService) {
+    if (this.configService.get<string>('LBS_BARCODE_REGEX')) this.regex = new RegExp(this.configService.get<string>('LBS_BARCODE_REGEX'), 'g');
+  }
 
   @Get("saml")
   saml(@Res() res) {
@@ -54,10 +57,10 @@ export class AuthController {
         } else {
           console.log('Token is valid but barcode does not match username for user ' + username);
           throw new UnauthorizedException({
-          code: "invalid_credentials",
-          error: "Password incorrect"
-        })
-      }
+            code: "invalid_credentials",
+            error: "Password incorrect"
+          })
+        }
       } catch (error) {
         console.log('password is not a valid JWT for user ' + username);
         throw new UnauthorizedException({
@@ -84,11 +87,15 @@ export class AuthController {
   async signonCallback(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
     //user object of request is enriched with token via saml auth guard
     //send a POST request to LBS server with token as form data
-    const lbsLoginUrl = process.env.LBS_LOGIN_URL!; 
+    const lbsLoginUrl = process.env.LBS_LOGIN_URL!;
 
     const payload = {
       id: req.user['name'],
       barcode: req.user['barcode']
+    }
+
+    if (this.regex && !this.regex.test(payload.barcode)) {
+      throw new InternalServerErrorException('Invalid barcode format from SAML response: ' + payload.barcode);
     }
 
     const token = this.jwtService.sign(payload);
