@@ -31,6 +31,8 @@ The service is responsible for:
 
 ## Authentication Workflow
 
+![Sequence diagram of the workflow](/doc/Sequence%20diagram.png "Sequence diagram of the workflow")
+
 ### 1) SAML sign-on starts
 
 Client is redirected from LOAN4 to `GET /auth/signon`, which triggers SAML authentication through Passport SAML.
