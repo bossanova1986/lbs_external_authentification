@@ -17,7 +17,7 @@ export class AuthController {
     if (this.configService.get<string>('LBS_BARCODE_REGEX')) this.regex = new RegExp(this.configService.get<string>('LBS_BARCODE_REGEX'), 'g');
   }
 
-  @Get("saml")
+  @Get('saml')
   saml(@Res() res) {
     res.set('Content-Type', 'text/xml');
     let a = this.ssoStrategy.generateServiceProviderMetadata(readFileSync(this.configService.get<string>('SSO_SP_CERT')).toString(), readFileSync(this.configService.get<string>('SSO_SP_CERT')).toString());
@@ -25,11 +25,11 @@ export class AuthController {
   }
 
   @UseGuards(SamlLoginGuard)
-  @Get("signon")
+  @Get('signon')
   signon() {
   }
 
-  @Get("lbs_login")
+  @Get('lbs_login')
   @HttpCode(200)
   lbs_login(@Req() req: Request) {
     //LBS sends request with Basic auth and Base64 encoded username:password in Authorization header, e.g. "Authorization: Basic dGVzdC11c2VyOnRlc3QtcGFzcw=="
@@ -52,7 +52,7 @@ export class AuthController {
         if (payload.barcode === username.replace(this.configService.get<string>('SSO_PREFIX'), '')) {
           console.log('SAML login successful for patron with barcode: ' + payload.barcode);
           return {
-            'patron': payload.barcode,
+            patron: payload.barcode,
           }
         } else {
           console.log('Token is valid but barcode does not match username for user ' + username);
@@ -61,7 +61,7 @@ export class AuthController {
             error: "Password incorrect"
           })
         }
-      } catch (error) {
+      } catch {
         console.log('password is not a valid JWT for user ' + username);
         throw new UnauthorizedException({
           code: "invalid_credentials",
@@ -78,7 +78,7 @@ export class AuthController {
   }
 
   @UseGuards(LogoutGuard)
-  @Get("logout")
+  @Get('logout')
   async logout() {
   }
 
@@ -118,7 +118,7 @@ export class AuthController {
   }
 
   @UseGuards(AuthGuard('saml'))
-  @Post("logoutCallback")
+  @Post('logoutCallback')
   async logoutCallback(@Res({ passthrough: true }) res) {
     console.log('LBS logout successful')
   }
