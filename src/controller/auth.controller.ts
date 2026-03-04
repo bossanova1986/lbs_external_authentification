@@ -5,8 +5,8 @@ import { AuthGuard } from "@nestjs/passport";
 import { Request, Response } from 'express';
 import { readFileSync } from 'fs';
 import * as sanitizeHtml from 'sanitize-html';
-import { SamlLoginGuard } from "src/services/saml-login.guard";
-import { SamlStrategy } from "src/strategies/saml.strategy";
+import { SamlLoginGuard } from "../services/saml-login.guard";
+import { SamlStrategy } from "../strategies/saml.strategy";
 import { LogoutGuard } from "../services/logout.guard";
 
 @Controller("auth")

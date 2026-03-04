@@ -1,3 +1,4 @@
+/* eslint-disable prettier/prettier */
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import * as request from 'supertest';
@@ -61,11 +62,11 @@ describe('AuthController (e2e)', () => {
 
   it('/auth/lbs_login (GET) rejects request without auth headers', () => {
     return request(app.getHttpServer())
-    .get('/auth/lbs_login')
+      .get('/auth/lbs_login')
       .expect(401)
       .expect(({ body }) => {
         expect(body.error).toBe('Client secret is not correct.');
         expect(body.code).toBe('invalid_client');
       });
-    });
+  });
 });
