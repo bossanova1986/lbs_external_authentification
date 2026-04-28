@@ -104,6 +104,19 @@ describe('AuthController (e2e)', () => {
       });
   });
 
+   it('/auth/lbs_login (GET) rejects malformed Basic auth credentials', () => {
+    return request(app.getHttpServer())
+      .get('/auth/lbs_login')
+      .set('Authorization', 'Basic')
+      .set('client-authorization', 'test-client-secret')
+      .expect(401)
+      .expect(({ body }) => {
+        expect(body.error).toBe('Password incorrect');
+        expect(body.code).toBe('invalid_credentials');
+      });
+  });
+
+
   it('/auth/lbs_login (GET) accepts prefixed users with matching barcode in JWT password', () => {
     const token = sign(
       { id: 'test-user', barcode: '123456' },

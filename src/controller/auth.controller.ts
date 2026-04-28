@@ -14,7 +14,6 @@ import { JwtService } from '@nestjs/jwt';
 import { AuthGuard } from '@nestjs/passport';
 import { Request, Response } from 'express';
 import { readFileSync } from 'fs';
-import * as sanitizeHtml from 'sanitize-html';
 import { SamlLoginGuard } from '../services/saml-login.guard';
 import { SamlStrategy } from '../strategies/saml.strategy';
 import { LogoutGuard } from '../services/logout.guard';
@@ -30,7 +29,6 @@ export class AuthController {
     if (this.configService.get<string>('LBS_BARCODE_REGEX'))
       this.regex = new RegExp(
         this.configService.get<string>('LBS_BARCODE_REGEX'),
-        'g',
       );
   }
 
@@ -65,12 +63,8 @@ export class AuthController {
         error: 'Client secret is not correct.',
       });
     }
-    const authHeader = req.headers.authorization;
-    const base64Credentials = authHeader.split(' ')[1];
-    const credentials = Buffer.from(base64Credentials, 'base64').toString(
-      'ascii',
-    );
-    const [username, token] = credentials.split(':');
+    const credentials = this.parseBasicCredentials(req.headers.authorization);
+    const { username, token } = credentials;
 
     if (username.startsWith(this.configService.get<string>('SSO_PREFIX'))) {
       try {
@@ -123,7 +117,7 @@ export class AuthController {
   ) {
     //user object of request is enriched with token via saml auth guard
     //send a POST request to LBS server with token as form data
-    const lbsLoginUrl = process.env.LBS_LOGIN_URL!;
+    const lbsLoginUrl = this.getValidatedLbsLoginUrl();
 
     const payload = {
       id: req.user['name'],
@@ -145,9 +139,9 @@ export class AuthController {
 <html>
   <head><meta charset="utf-8"></head>
   <body>
-    <form id="lbs" action="${sanitizeHtml(lbsLoginUrl)}" method="post">
-      <input type="hidden" name="username" value="${sanitizeHtml(this.configService.get<string>('SSO_PREFIX') + String(req.user['barcode']))}">
-      <input type="hidden" name="password" value="${sanitizeHtml(String(token))}">
+   <form id="lbs" action="${this.escapeHtmlAttribute(lbsLoginUrl)}" method="post">
+      <input type="hidden" name="username" value="${this.escapeHtmlAttribute(this.configService.get<string>('SSO_PREFIX') + String(req.user['barcode']))}">
+      <input type="hidden" name="password" value="${this.escapeHtmlAttribute(String(token))}">
     </form>
     <script>document.getElementById('lbs').submit();</script>
   </body>
@@ -158,5 +152,74 @@ export class AuthController {
   @Post('logoutCallback')
   async logoutCallback(@Res({ passthrough: true }) _res) {
     console.log('LBS logout successful');
+  }
+
+  private parseBasicCredentials(authorizationHeader: string): {
+    username: string;
+    token: string;
+  } {
+    const [scheme, encodedCredentials] = authorizationHeader.split(/\s+/);
+
+    if (!scheme || scheme.toLowerCase() !== 'basic' || !encodedCredentials) {
+      this.throwInvalidCredentials();
+    }
+
+    const credentials = Buffer.from(encodedCredentials, 'base64').toString(
+      'utf8',
+    );
+    const separatorIndex = credentials.indexOf(':');
+
+    if (separatorIndex <= 0 || separatorIndex === credentials.length - 1) {
+      this.throwInvalidCredentials();
+    }
+
+    return {
+      username: credentials.slice(0, separatorIndex),
+      token: credentials.slice(separatorIndex + 1),
+    };
+  }
+
+  private getValidatedLbsLoginUrl(): string {
+    const lbsLoginUrl = this.configService.get<string>('LBS_LOGIN_URL');
+
+    if (!lbsLoginUrl) {
+      throw new InternalServerErrorException('LBS login URL is not configured');
+    }
+
+    try {
+      const parsedUrl = new URL(lbsLoginUrl);
+      if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
+        throw new Error('Unsupported protocol');
+      }
+      return parsedUrl.toString();
+    } catch {
+      throw new InternalServerErrorException('LBS login URL is invalid');
+    }
+  }
+
+  private escapeHtmlAttribute(value: string): string {
+    return value.replace(/[&<>"']/g, (character) => {
+      switch (character) {
+        case '&':
+          return '&amp;';
+        case '<':
+          return '&lt;';
+        case '>':
+          return '&gt;';
+        case '"':
+          return '&quot;';
+        case "'":
+          return '&#39;';
+        default:
+          return character;
+      }
+    });
+  }
+
+  private throwInvalidCredentials(): never {
+    throw new UnauthorizedException({
+      code: 'invalid_credentials',
+      error: 'Password incorrect',
+    });
   }
 }

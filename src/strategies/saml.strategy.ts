@@ -2,6 +2,7 @@ import { PassportStrategy } from '@nestjs/passport';
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { readFileSync } from 'fs';
+import { ValidateInResponseTo } from '@node-saml/node-saml';
 import {
   Profile,
   Strategy,
@@ -11,13 +12,17 @@ import {
 @Injectable()
 export class SamlStrategy extends PassportStrategy(Strategy) {
   constructor(private configService: ConfigService) {
-    const signonVerify: VerifyWithRequest = (
+    const signonVerify: VerifyWithRequest = async (
       _req,
       profile: Profile,
       done: (err: any, user?: any) => void,
     ) => {
-      const user = this.validate(_req, profile);
-      return done(null, user);
+      try {
+        const user = this.validate(_req, profile);
+        return done(null, user);
+      } catch (err) {
+        return done(err);
+      }
     };
     super(
       {
@@ -45,22 +50,39 @@ export class SamlStrategy extends PassportStrategy(Strategy) {
         ), // whether the IdP will sign the SAML Response. This is used by the IdP to determine whether to sign the SAML Response. The default is false.
         passReqToCallback: true,
         idpCert: readFileSync(configService.get('SSO_IDP_PUBLICKEY'), 'utf-8'), // the IDP's public signing certificate used to validate the signatures of the incoming SAML Responses,
+        validateInResponseTo: ValidateInResponseTo.always, // whether to validate the InResponseTo field of the SAML Response. This is used to prevent replay attacks. The default is false.
+        requestIdExpirationPeriodMs: Number(
+          configService.get<string>('SSO_REQUEST_ID_EXPIRATION_MS') ?? 300000,
+        ),
       },
       signonVerify,
     );
   }
 
-  async validate(_req: any, profile: Profile): Promise<any> {
+  validate(_req: any, profile: Profile): any {
     //console.log(profile);
-    const name = profile[
-      this.configService.get<string>('SSO_IDP_UID_FIELD')
-    ] as string;
-    const barcode = profile[
-      this.configService.get<string>('SSO_IDP_BARCODE_FIELD')
-    ] as string;
+    const name = this.getStringAttribute(
+      profile,
+      this.configService.get<string>('SSO_IDP_UID_FIELD'),
+    );
+    const barcode = this.getStringAttribute(
+      profile,
+      this.configService.get<string>('SSO_IDP_BARCODE_FIELD'),
+    );
     return {
       name,
       barcode,
     };
+  }
+
+  private getStringAttribute(profile: Profile, attributeName: string): string {
+    const value = profile[attributeName];
+    const normalizedValue = Array.isArray(value) ? value[0] : value;
+
+    if (typeof normalizedValue !== 'string' || normalizedValue.length === 0) {
+      throw new Error(`Missing required SAML attribute: ${attributeName}`);
+    }
+
+    return normalizedValue;
   }
 }

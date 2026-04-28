@@ -9,14 +9,12 @@ WORKDIR /usr/src/app/
 COPY . .
 
 # Install the application dependencies
-RUN npm i
-RUN npm audit fix 2>&1 > /deploy/deploy.log || echo "Errors while performing audit fix for api"
-#RUN npm upgrade jwa
+RUN npm ci
 
 # Build application
 RUN npm run build
 
-# Prod-Only Deps prunen
+# Prod-only Deps prunen
 RUN npm prune --omit=dev
 
 # ------------ Runtime Image -------------
