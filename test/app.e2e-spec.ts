@@ -6,9 +6,11 @@ import { AppModule } from './../src/app.module';
 import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { sign } from 'jsonwebtoken';
 
 describe('AuthController (e2e)', () => {
   let app: INestApplication;
+  let jwtSecret: string;
   
   beforeAll(() => {
     const tempDir = mkdtempSync(join(tmpdir(), 'saml-test-'));
@@ -18,8 +20,10 @@ describe('AuthController (e2e)', () => {
       return file;
     };
 
-    const privateKey = writeTemp('private.pem', 'test-private-key');
-    const publicKey = writeTemp('public.pem', 'test-public-key');
+    jwtSecret = 'test-jwt-secret';
+
+    const privateKey = writeTemp('private.pem', jwtSecret);
+    const publicKey = writeTemp('public.pem', jwtSecret);
     const cert = writeTemp('cert.pem', 'test-cert');
 
     process.env.SSO_SP_CERT = cert;
@@ -48,7 +52,7 @@ describe('AuthController (e2e)', () => {
     process.env.JWT_TOKEN_PUBLICKEY = publicKey;
     process.env.JWT_TOKEN_PRIVATEKEY = privateKey;
     process.env.JWT_TOKEN_EXPIRATION = '60s';
-    process.env.JWT_TOKEN_ALGORITHM = 'RS256';
+    process.env.JWT_TOKEN_ALGORITHM = 'HS256';
   });
 
   beforeEach(async () => {
@@ -67,6 +71,54 @@ describe('AuthController (e2e)', () => {
       .expect(({ body }) => {
         expect(body.error).toBe('Client secret is not correct.');
         expect(body.code).toBe('invalid_client');
+      });
+  });
+
+  it('/auth/lbs_login (GET) rejects users without SSO prefix', () => {
+    const credentials = Buffer.from('plain-user:any-password').toString(
+      'base64',
+    );
+
+    return request(app.getHttpServer())
+      .get('/auth/lbs_login')
+      .set('Authorization', `Basic ${credentials}`)
+      .set('client-authorization', 'test-client-secret')
+      .expect(401)
+      .expect(({ body }) => {
+        expect(body.error).toBe('User does not exist');
+        expect(body.code).toBe('not_found');
+      });
+  });
+
+  it('/auth/lbs_login (GET) rejects prefixed users with invalid JWT password', () => {
+    const credentials = Buffer.from('saml_123456:not-a-jwt').toString('base64');
+
+    return request(app.getHttpServer())
+      .get('/auth/lbs_login')
+      .set('Authorization', `Basic ${credentials}`)
+      .set('client-authorization', 'test-client-secret')
+      .expect(401)
+      .expect(({ body }) => {
+        expect(body.error).toBe('Password incorrect');
+        expect(body.code).toBe('invalid_credentials');
+      });
+  });
+
+  it('/auth/lbs_login (GET) accepts prefixed users with matching barcode in JWT password', () => {
+    const token = sign(
+      { id: 'test-user', barcode: '123456' },
+      jwtSecret,
+      { algorithm: 'HS256', expiresIn: '60s' },
+    );
+    const credentials = Buffer.from(`saml_123456:${token}`).toString('base64');
+
+    return request(app.getHttpServer())
+      .get('/auth/lbs_login')
+      .set('Authorization', `Basic ${credentials}`)
+      .set('client-authorization', 'test-client-secret')
+      .expect(200)
+      .expect(({ body }) => {
+        expect(body).toEqual({ patron: '123456' });
       });
   });
 });
