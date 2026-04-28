@@ -3,10 +3,9 @@ import { AuthGuard, IAuthModuleOptions } from '@nestjs/passport';
 
 @Injectable()
 export class LogoutGuard extends AuthGuard('saml') {
-
-  getAuthenticateOptions(context: ExecutionContext): IAuthModuleOptions {
+  getAuthenticateOptions(_context: ExecutionContext): IAuthModuleOptions {
     return {
-      samlFallback: "logout-request"
+      samlFallback: 'logout-request',
     };
   }
 }

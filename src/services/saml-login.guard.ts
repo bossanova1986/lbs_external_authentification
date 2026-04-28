@@ -7,9 +7,7 @@ export class SamlLoginGuard extends AuthGuard('saml') {
     super();
   }
 
-  getAuthenticateOptions(context: ExecutionContext) {
-    const req = context.switchToHttp().getRequest();
-
+  getAuthenticateOptions(_context: ExecutionContext) {
     return {
       additionalParams: {},
     };

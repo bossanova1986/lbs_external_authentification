@@ -12,14 +12,23 @@ import { Algorithm } from 'jsonwebtoken';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: [(process.env.NODE_ENV) ? `env.${process.env.NODE_ENV}` : 'env.template'],
+      envFilePath: [
+        process.env.NODE_ENV ? `env.${process.env.NODE_ENV}` : 'env.template',
+      ],
     }),
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => ({
-        publicKey: readFileSync(configService.get<string>('JWT_TOKEN_PUBLICKEY')),
-        privateKey: readFileSync(configService.get<string>('JWT_TOKEN_PRIVATEKEY')),
-        signOptions: { expiresIn: configService.get<any>('JWT_TOKEN_EXPIRATION'), algorithm: configService.get<Algorithm>('JWT_TOKEN_ALGORITHM') },
+        publicKey: readFileSync(
+          configService.get<string>('JWT_TOKEN_PUBLICKEY'),
+        ),
+        privateKey: readFileSync(
+          configService.get<string>('JWT_TOKEN_PRIVATEKEY'),
+        ),
+        signOptions: {
+          expiresIn: configService.get<any>('JWT_TOKEN_EXPIRATION'),
+          algorithm: configService.get<Algorithm>('JWT_TOKEN_ALGORITHM'),
+        },
       }),
       inject: [ConfigService],
     }),
