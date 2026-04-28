@@ -32,6 +32,7 @@ export class SamlStrategy extends PassportStrategy(Strategy) {
     }
 
     async validate(req: any, profile: Profile): Promise<any> {
+        console.log(profile);
         let name = profile[this.configService.get<string>('SSO_IDP_UID_FIELD')] as string;
         let barcode = profile[this.configService.get<string>('SSO_IDP_BARCODE_FIELD')] as string;
         return {
